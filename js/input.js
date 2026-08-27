@@ -2,7 +2,7 @@
    WHEN THE LIGHT DIES
    INPUT SYSTEM
    PC + MOBILE
-   Version 0.1.0
+   Version 0.1.1
 ========================================================= */
 
 "use strict";
@@ -40,12 +40,9 @@ const Input = (() => {
        KEY NORMALIZATION
     ===================================================== */
 
-    function normalizeKey(
-        event
-    ) {
+    function normalizeKey(event) {
 
-        return event.code ||
-            event.key;
+        return event.code || event.key;
     }
 
 
@@ -53,37 +50,28 @@ const Input = (() => {
        KEY DOWN
     ===================================================== */
 
-    function handleKeyDown(
-        event
-    ) {
+    function handleKeyDown(event) {
 
-        const code =
-            normalizeKey(event);
-
+        const code = normalizeKey(event);
 
         /*
-           IMPORTANT:
-           Enter is deliberately NOT
-           mapped to gameplay movement.
+           Ignore repeated keydown events.
 
-           This prevents accidental
-           browser/game submission behaviour.
+           This is important for one-shot actions
+           such as E, F, I, Space and Escape.
         */
 
-        if (
-            !keys.has(code)
-        ) {
+        if (!keys.has(code)) {
 
             justPressed.add(code);
         }
-
 
         keys.add(code);
 
 
         /*
-           Prevent browser scrolling for
-           gameplay keys.
+           Prevent browser defaults only for
+           controls used by the game.
         */
 
         const blockedKeys = [
@@ -108,9 +96,7 @@ const Input = (() => {
         ];
 
 
-        if (
-            blockedKeys.includes(code)
-        ) {
+        if (blockedKeys.includes(code)) {
 
             event.preventDefault();
         }
@@ -121,22 +107,16 @@ const Input = (() => {
        KEY UP
     ===================================================== */
 
-    function handleKeyUp(
-        event
-    ) {
+    function handleKeyUp(event) {
 
-        const code =
-            normalizeKey(event);
-
+        const code = normalizeKey(event);
 
         keys.delete(code);
 
         justReleased.add(code);
 
 
-        if (
-            code === "Space"
-        ) {
+        if (code === "Space") {
 
             event.preventDefault();
         }
@@ -147,25 +127,19 @@ const Input = (() => {
        KEY QUERIES
     ===================================================== */
 
-    function isDown(
-        code
-    ) {
+    function isDown(code) {
 
         return keys.has(code);
     }
 
 
-    function pressed(
-        code
-    ) {
+    function pressed(code) {
 
         return justPressed.has(code);
     }
 
 
-    function released(
-        code
-    ) {
+    function released(code) {
 
         return justReleased.has(code);
     }
@@ -219,7 +193,7 @@ const Input = (() => {
 
 
         /*
-           Mobile movement
+           Mobile movement.
         */
 
         if (touchState.left) {
@@ -257,9 +231,7 @@ const Input = (() => {
             );
 
 
-        if (
-            length > 1
-        ) {
+        if (length > 1) {
 
             x /= length;
             y /= length;
@@ -311,17 +283,13 @@ const Input = (() => {
 
     function isPausePressed() {
 
-        return pressed(
-            "Escape"
-        );
+        return pressed("Escape");
     }
 
 
     function isDialoguePressed() {
 
-        return pressed(
-            "Space"
-        );
+        return pressed("Space");
     }
 
 
@@ -329,10 +297,7 @@ const Input = (() => {
        TOUCH HELPERS
     ===================================================== */
 
-    function setTouch(
-        action,
-        value
-    ) {
+    function setTouch(action, value) {
 
         if (
             Object.prototype.hasOwnProperty.call(
@@ -346,6 +311,10 @@ const Input = (() => {
         }
     }
 
+
+    /* =====================================================
+       MOBILE CONTROLS
+    ===================================================== */
 
     function createTouchControls() {
 
@@ -473,81 +442,79 @@ const Input = (() => {
             );
 
 
-        buttons.forEach(
-            button => {
+        buttons.forEach(button => {
 
-                const action =
-                    button.dataset.touch;
-
-
-                const start =
-                    event => {
-
-                        event.preventDefault();
-
-                        setTouch(
-                            action,
-                            true
-                        );
-
-                        button.classList.add(
-                            "pressed"
-                        );
-                    };
+            const action =
+                button.dataset.touch;
 
 
-                const end =
-                    event => {
+            const start =
+                event => {
 
-                        event.preventDefault();
+                    event.preventDefault();
 
-                        setTouch(
-                            action,
-                            false
-                        );
+                    setTouch(
+                        action,
+                        true
+                    );
 
-                        button.classList.remove(
-                            "pressed"
-                        );
-                    };
-
-
-                button.addEventListener(
-                    "pointerdown",
-                    start,
-                    {
-                        passive: false
-                    }
-                );
+                    button.classList.add(
+                        "pressed"
+                    );
+                };
 
 
-                button.addEventListener(
-                    "pointerup",
-                    end,
-                    {
-                        passive: false
-                    }
-                );
+            const end =
+                event => {
+
+                    event.preventDefault();
+
+                    setTouch(
+                        action,
+                        false
+                    );
+
+                    button.classList.remove(
+                        "pressed"
+                    );
+                };
 
 
-                button.addEventListener(
-                    "pointercancel",
-                    end,
-                    {
-                        passive: false
-                    }
-                );
+            button.addEventListener(
+                "pointerdown",
+                start,
+                {
+                    passive: false
+                }
+            );
 
 
-                button.addEventListener(
-                    "pointerleave",
-                    end,
-                    {
-                        passive: false
-                    }
-                );
-            }
-        );
+            button.addEventListener(
+                "pointerup",
+                end,
+                {
+                    passive: false
+                }
+            );
+
+
+            button.addEventListener(
+                "pointercancel",
+                end,
+                {
+                    passive: false
+                }
+            );
+
+
+            button.addEventListener(
+                "pointerleave",
+                end,
+                {
+                    passive: false
+                }
+            );
+        });
     }
 
 
@@ -563,7 +530,8 @@ const Input = (() => {
 
 
         /*
-           Action buttons are one-shot.
+           Mobile action buttons are
+           one-shot actions.
         */
 
         touchState.interact =
@@ -589,8 +557,7 @@ const Input = (() => {
         }
 
 
-        initialized =
-            true;
+        initialized = true;
 
 
         window.addEventListener(
@@ -612,8 +579,8 @@ const Input = (() => {
 
 
         /*
-           Prevent stuck keys when the
-           browser/tab loses focus.
+           Prevent stuck keys when browser
+           or tab loses focus.
         */
 
         window.addEventListener(
@@ -623,8 +590,8 @@ const Input = (() => {
 
 
         /*
-           Mobile controls are created
-           only on touch-capable devices.
+           Create mobile controls only when
+           touch input is available.
         */
 
         if (
@@ -652,13 +619,11 @@ const Input = (() => {
 
         Object.keys(
             touchState
-        ).forEach(
-            key => {
+        ).forEach(key => {
 
-                touchState[key] =
-                    false;
-            }
-        );
+            touchState[key] =
+                false;
+        });
     }
 
 
@@ -670,8 +635,7 @@ const Input = (() => {
 
         initialize,
 
-        update:
-            endFrame,
+        update: endFrame,
 
         isDown,
 
