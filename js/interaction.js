@@ -1,6 +1,7 @@
 /* =========================================================
    WHEN THE LIGHT DIES
    INTERACTION SYSTEM
+   Version 0.1.1
 ========================================================= */
 
 "use strict";
@@ -27,6 +28,8 @@ const Interaction = (() => {
 
         initialized = true;
 
+        currentTarget = null;
+
         hidePrompt();
     }
 
@@ -43,6 +46,11 @@ const Interaction = (() => {
             typeof World === "undefined" ||
             typeof Input === "undefined"
         ) {
+
+            hidePrompt();
+
+            currentTarget = null;
+
             return;
         }
 
@@ -52,9 +60,11 @@ const Interaction = (() => {
 
 
         if (
+            !state ||
             !state.gameStarted ||
             state.gamePaused ||
             state.gameOver ||
+            !state.player ||
             !state.player.isAlive
         ) {
 
@@ -69,14 +79,14 @@ const Interaction = (() => {
         findTarget();
 
 
-        if (
-            currentTarget
-        ) {
+        if (currentTarget) {
 
-            showPrompt(
-                currentTarget
-            );
+            showPrompt(currentTarget);
 
+
+            /*
+               E key / mobile interaction.
+            */
 
             if (
                 Input.isInteractPressed()
@@ -85,6 +95,15 @@ const Interaction = (() => {
                 interact(
                     currentTarget
                 );
+
+                /*
+                   Prevent the same object from
+                   being triggered repeatedly.
+                */
+
+                currentTarget = null;
+
+                hidePrompt();
             }
 
         } else {
@@ -99,6 +118,21 @@ const Interaction = (() => {
     ===================================================== */
 
     function findTarget() {
+
+        if (
+            typeof World.getCurrentRoom !==
+            "function" ||
+            typeof World.getObjectsInRoom !==
+            "function" ||
+            typeof Player.getPosition !==
+            "function"
+        ) {
+
+            currentTarget = null;
+
+            return;
+        }
+
 
         const room =
             World.getCurrentRoom();
@@ -116,10 +150,26 @@ const Interaction = (() => {
             Player.getPosition();
 
 
+        if (!playerPosition) {
+
+            currentTarget = null;
+
+            return;
+        }
+
+
         const objects =
             World.getObjectsInRoom(
                 room.id
             );
+
+
+        if (!Array.isArray(objects)) {
+
+            currentTarget = null;
+
+            return;
+        }
 
 
         let closest = null;
@@ -128,37 +178,47 @@ const Interaction = (() => {
             interactionDistance;
 
 
-        objects.forEach(
-            object => {
+        objects.forEach(object => {
 
-                if (!object) {
-                    return;
-                }
-
-
-                const distance =
-                    getDistance(
-                        playerPosition.x,
-                        playerPosition.y,
-
-                        object.x,
-                        object.y
-                    );
-
-
-                if (
-                    distance <=
-                    closestDistance
-                ) {
-
-                    closest =
-                        object;
-
-                    closestDistance =
-                        distance;
-                }
+            if (!object) {
+                return;
             }
-        );
+
+
+            /*
+               Objects without valid coordinates
+               cannot be interacted with.
+            */
+
+            if (
+                typeof object.x !== "number" ||
+                typeof object.y !== "number"
+            ) {
+
+                return;
+            }
+
+
+            const distance =
+                getDistance(
+                    playerPosition.x,
+                    playerPosition.y,
+                    object.x,
+                    object.y
+                );
+
+
+            if (
+                distance <= closestDistance
+            ) {
+
+                closest =
+                    object;
+
+                closestDistance =
+                    distance;
+            }
+        });
 
 
         currentTarget =
@@ -195,69 +255,53 @@ const Interaction = (() => {
        INTERACT
     ===================================================== */
 
-    function interact(
-        object
-    ) {
+    function interact(object) {
 
         if (!object) {
             return;
         }
 
 
-        switch (
-            object.type
-        ) {
+        switch (object.type) {
 
             case "door":
 
-                interactDoor(
-                    object
-                );
+                interactDoor(object);
 
                 break;
 
 
             case "clue":
 
-                interactClue(
-                    object
-                );
+                interactClue(object);
 
                 break;
 
 
             case "container":
 
-                interactContainer(
-                    object
-                );
+                interactContainer(object);
 
                 break;
 
 
             case "generator":
 
-                interactGenerator(
-                    object
-                );
+                interactGenerator(object);
 
                 break;
 
 
             case "light":
 
-                interactLight(
-                    object
-                );
+                interactLight(object);
 
                 break;
 
 
             default:
 
-                genericInteraction(
-                    object
-                );
+                genericInteraction(object);
 
                 break;
         }
@@ -268,23 +312,20 @@ const Interaction = (() => {
        DOOR
     ===================================================== */
 
-    function interactDoor(
-        door
-    ) {
+    function interactDoor(door) {
 
-        if (
-            door.locked
-        ) {
+        if (door.locked) {
 
             if (
                 door.requiredItem &&
+                typeof GameState.hasItem ===
+                "function" &&
                 GameState.hasItem(
                     door.requiredItem
                 )
             ) {
 
-                door.locked =
-                    false;
+                door.locked = false;
 
                 notify(
                     "The door is unlocked."
@@ -296,9 +337,7 @@ const Interaction = (() => {
                     "It's locked."
                 );
 
-                changeSanity(
-                    -0.5
-                );
+                changeSanity(-0.5);
 
                 return;
             }
@@ -306,7 +345,9 @@ const Interaction = (() => {
 
 
         if (
-            door.targetRoom
+            door.targetRoom &&
+            typeof World.changeRoom ===
+            "function"
         ) {
 
             World.changeRoom(
@@ -320,9 +361,7 @@ const Interaction = (() => {
        CLUE
     ===================================================== */
 
-    function interactClue(
-        clue
-    ) {
+    function interactClue(clue) {
 
         if (!clue.clueId) {
 
@@ -333,10 +372,6 @@ const Interaction = (() => {
             return;
         }
 
-
-        /*
-           Mark clue as discovered.
-        */
 
         if (
             typeof GameState.setStoryFlag ===
@@ -350,14 +385,8 @@ const Interaction = (() => {
         }
 
 
-        /*
-           Let the story system decide
-           what happens next.
-        */
-
         if (
-            typeof Story !==
-            "undefined" &&
+            typeof Story !== "undefined" &&
             typeof Story.discoverClue ===
             "function"
         ) {
@@ -374,9 +403,7 @@ const Interaction = (() => {
         }
 
 
-        changeSanity(
-            -1
-        );
+        changeSanity(-1);
     }
 
 
@@ -384,16 +411,25 @@ const Interaction = (() => {
        CONTAINER
     ===================================================== */
 
-    function interactContainer(
-        container
-    ) {
+    function interactContainer(container) {
 
-        if (
-            container.opened
-        ) {
+        if (container.opened) {
 
             notify(
                 "It's already open."
+            );
+
+            return;
+        }
+
+
+        if (
+            typeof World.openContainer !==
+            "function"
+        ) {
+
+            notify(
+                "You can't open this right now."
             );
 
             return;
@@ -425,13 +461,9 @@ const Interaction = (() => {
        GENERATOR
     ===================================================== */
 
-    function interactGenerator(
-        generator
-    ) {
+    function interactGenerator(generator) {
 
-        if (
-            generator.activated
-        ) {
+        if (generator.activated) {
 
             notify(
                 "The generator is already running."
@@ -441,18 +473,18 @@ const Interaction = (() => {
         }
 
 
-        /*
-           Generator activation will later
-           be connected to a story requirement.
-        */
-
-        generator.activated =
-            true;
+        generator.activated = true;
 
 
-        World.activateObject(
-            generator.id
-        );
+        if (
+            typeof World.activateObject ===
+            "function"
+        ) {
+
+            World.activateObject(
+                generator.id
+            );
+        }
 
 
         notify(
@@ -461,8 +493,7 @@ const Interaction = (() => {
 
 
         if (
-            typeof Story !==
-            "undefined" &&
+            typeof Story !== "undefined" &&
             typeof Story.onGeneratorActivated ===
             "function"
         ) {
@@ -478,17 +509,21 @@ const Interaction = (() => {
        LIGHT
     ===================================================== */
 
-    function interactLight(
-        light
-    ) {
+    function interactLight(light) {
 
         light.active =
             !light.active;
 
 
-        World.activateObject(
-            light.id
-        );
+        if (
+            typeof World.activateObject ===
+            "function"
+        ) {
+
+            World.activateObject(
+                light.id
+            );
+        }
 
 
         notify(
@@ -503,9 +538,7 @@ const Interaction = (() => {
        GENERIC
     ===================================================== */
 
-    function genericInteraction(
-        object
-    ) {
+    function genericInteraction(object) {
 
         notify(
             "You examine it."
@@ -513,8 +546,7 @@ const Interaction = (() => {
 
 
         if (
-            typeof Story !==
-            "undefined" &&
+            typeof Story !== "undefined" &&
             typeof Story.onInteraction ===
             "function"
         ) {
@@ -530,9 +562,7 @@ const Interaction = (() => {
        UI PROMPT
     ===================================================== */
 
-    function showPrompt(
-        object
-    ) {
+    function showPrompt(object) {
 
         const prompt =
             document.getElementById(
@@ -598,28 +628,38 @@ const Interaction = (() => {
     }
 
 
-    function getInteractionText(
-        object
-    ) {
+    /* =====================================================
+       INTERACTION TEXT
+    ===================================================== */
 
-        switch (
-            object.type
-        ) {
+    function getInteractionText(object) {
+
+        if (!object) {
+            return "INTERACT";
+        }
+
+
+        switch (object.type) {
 
             case "door":
                 return "OPEN";
 
+
             case "clue":
                 return "EXAMINE";
+
 
             case "container":
                 return "SEARCH";
 
+
             case "generator":
                 return "ACTIVATE";
 
+
             case "light":
                 return "TOGGLE";
+
 
             default:
                 return "INTERACT";
@@ -631,9 +671,7 @@ const Interaction = (() => {
        NOTIFICATION
     ===================================================== */
 
-    function notify(
-        message
-    ) {
+    function notify(message) {
 
         const container =
             document.getElementById(
@@ -692,11 +730,10 @@ const Interaction = (() => {
        SANITY
     ===================================================== */
 
-    function changeSanity(
-        amount
-    ) {
+    function changeSanity(amount) {
 
         if (
+            typeof GameState !== "undefined" &&
             typeof GameState.changeSanity ===
             "function"
         ) {
@@ -705,6 +742,16 @@ const Interaction = (() => {
                 amount
             );
         }
+    }
+
+
+    /* =====================================================
+       CURRENT TARGET
+    ===================================================== */
+
+    function getCurrentTarget() {
+
+        return currentTarget;
     }
 
 
