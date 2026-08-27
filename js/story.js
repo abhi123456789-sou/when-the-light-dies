@@ -1,227 +1,141 @@
 /* =========================================================
    WHEN THE LIGHT DIES
-   STORY ENGINE
+   STORY SYSTEM
+   Main Narrative Controller
 ========================================================= */
 
 "use strict";
 
+
 const Story = (() => {
 
-    let activeDialogue = null;
-    let dialogueIndex = 0;
-    let waitingForChoice = false;
+    let initialized = false;
 
-    const storyData = {
+    let currentChapter = 0;
 
-        chapters: {
+    let currentObjective = "";
 
-            1: {
+    const chapters = {
 
-                id: 1,
-
-                title: "THE AWAKENING",
-
-                scenes: {
-
-                    1: {
-
-                        id: "chapter1_scene1",
-
-                        title: "THE ROOM",
-
-                        startDialogue: "intro_wake",
-
-                        objective: {
-                            id: "intro_start",
-                            title: "Find a way out",
-                            description:
-                                "Something is wrong. Find out where you are."
-                        }
-                    }
-                }
-            }
+        0: {
+            id: "awakening",
+            title: "THE AWAKENING"
         },
 
+        1: {
+            id: "house",
+            title: "THE HOUSE"
+        },
 
-        dialogues: {
+        2: {
+            id: "echoes",
+            title: "THE ECHOES"
+        },
 
-            intro_wake: {
+        3: {
+            id: "basement",
+            title: "BELOW"
+        },
 
-                character: "UNKNOWN",
-
-                lines: [
-
-                    {
-                        text:
-                            "..."
-
-                    },
-
-                    {
-                        text:
-                            "Where... am I?"
-                    },
-
-                    {
-                        text:
-                            "It's too dark."
-                    },
-
-                    {
-                        text:
-                            "I can't remember how I got here."
-                    }
-
-                ],
-
-                next: "intro_first_choice"
-            },
-
-
-            intro_first_choice: {
-
-                character: "YOU",
-
-                lines: [
-
-                    {
-                        text:
-                            "I need to figure out what's happening."
-                    }
-
-                ],
-
-                choices: [
-
-                    {
-                        id: "choice_search_room",
-
-                        text:
-                            "Search the room.",
-
-                        consequences: {
-
-                            flags: {
-                                searchedRoom: true
-                            }
-                        },
-
-                        next:
-                            "intro_search"
-                    },
-
-
-                    {
-                        id: "choice_call_out",
-
-                        text:
-                            "Call out for someone.",
-
-                        consequences: {
-
-                            flags: {
-                                calledOut: true
-                            },
-
-                            sanity: -5
-                        },
-
-                        next:
-                            "intro_call"
-                    }
-                ]
-            },
-
-
-            intro_search: {
-
-                character: "YOU",
-
-                lines: [
-
-                    {
-                        text:
-                            "There has to be something here."
-                    },
-
-                    {
-                        text:
-                            "A door... and something on the floor."
-                    }
-
-                ],
-
-                consequences: {
-
-                    flags: {
-                        roomSearched: true
-                    }
-                },
-
-                next: null
-            },
-
-
-            intro_call: {
-
-                character: "YOU",
-
-                lines: [
-
-                    {
-                        text:
-                            "Hello?"
-
-                    },
-
-                    {
-                        text:
-                            "Is anyone there?"
-                    },
-
-                    {
-                        text:
-                            "..."
-
-                    },
-
-                    {
-                        text:
-                            "Something just moved."
-                    }
-
-                ],
-
-                consequences: {
-
-                    flags: {
-                        heardSomething: true
-                    }
-                },
-
-                next: null
-            }
+        4: {
+            id: "truth",
+            title: "THE TRUTH"
         }
     };
 
 
     /* =====================================================
-       GET CHAPTER
+       INITIALIZE
     ===================================================== */
 
-    function getChapter(chapterId) {
+    function initialize() {
 
-        return storyData.chapters[chapterId];
+        if (initialized) {
+            return;
+        }
+
+        initialized = true;
+
+        currentChapter = 0;
+
+        setObjective(
+            "Find a way out of the house."
+        );
     }
 
 
     /* =====================================================
-       GET DIALOGUE
+       START STORY
     ===================================================== */
 
-    function getDialogue(dialogueId) {
+    function start() {
 
-        return storyData.dialogues[dialogueId];
+        initialize();
+
+        currentChapter = 0;
+
+        setStoryFlag(
+            "story_started",
+            true
+        );
+
+
+        setObjective(
+            "Find a way out of the house."
+        );
+
+
+        startDialogue(
+            getOpeningDialogue()
+        );
+    }
+
+
+    /* =====================================================
+       OPENING DIALOGUE
+    ===================================================== */
+
+    function getOpeningDialogue() {
+
+        return {
+
+            textSpeed: 22,
+
+            lines: [
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "Where... am I?"
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "I can't remember how I got here."
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "The lights... why are they flickering?"
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "I need to find a way out."
+                }
+            ]
+        };
     }
 
 
@@ -229,488 +143,690 @@ const Story = (() => {
        START DIALOGUE
     ===================================================== */
 
-    function startDialogue(dialogueId) {
-
-        const dialogue =
-            getDialogue(dialogueId);
-
-        if (!dialogue) {
-
-            console.warn(
-                "Dialogue not found:",
-                dialogueId
-            );
-
-            return false;
-        }
-
-
-        activeDialogue = dialogue;
-
-        dialogueIndex = 0;
-
-        waitingForChoice = false;
-
-
-        renderDialogue();
-
-
-        return true;
-    }
-
-
-    /* =====================================================
-       RENDER DIALOGUE
-    ===================================================== */
-
-    function renderDialogue() {
-
-        if (!activeDialogue) {
-            return;
-        }
-
-
-        const character =
-            document.getElementById(
-                "dialogue-character"
-            );
-
-        const text =
-            document.getElementById(
-                "dialogue-text"
-            );
-
-        const choices =
-            document.getElementById(
-                "dialogue-choices"
-            );
-
-        const container =
-            document.getElementById(
-                "dialogue-container"
-            );
-
-
-        if (character) {
-
-            character.textContent =
-                activeDialogue.character ||
-                "UNKNOWN";
-        }
-
-
-        if (text) {
-
-            const line =
-                activeDialogue.lines[
-                    dialogueIndex
-                ];
-
-            text.textContent =
-                line
-                    ? line.text
-                    : "";
-        }
-
-
-        if (choices) {
-
-            choices.innerHTML = "";
-        }
-
-
-        if (container) {
-
-            container.classList.add(
-                "active"
-            );
-        }
-
-
-        updateDialogueHint();
-    }
-
-
-    /* =====================================================
-       NEXT LINE
-    ===================================================== */
-
-    function next() {
-
-        if (!activeDialogue) {
-            return;
-        }
-
-
-        if (waitingForChoice) {
-            return;
-        }
-
-
-        dialogueIndex++;
-
+    function startDialogue(
+        dialogue
+    ) {
 
         if (
-            dialogueIndex <
-            activeDialogue.lines.length
+            typeof Dialogue !==
+            "undefined"
         ) {
 
-            renderDialogue();
-
-            return;
+            Dialogue.start(
+                dialogue
+            );
         }
+    }
 
+
+    /* =====================================================
+       ROOM ENTER
+    ===================================================== */
+
+    function onRoomEnter(
+        roomId
+    ) {
+
+        switch (
+            roomId
+        ) {
+
+            case "intro":
+
+                handleIntroRoom();
+
+                break;
+
+
+            case "hallway":
+
+                handleHallway();
+
+                break;
+
+
+            case "living-room":
+
+                handleLivingRoom();
+
+                break;
+
+
+            case "kitchen":
+
+                handleKitchen();
+
+                break;
+
+
+            case "bedroom":
+
+                handleBedroom();
+
+                break;
+
+
+            case "basement":
+
+                handleBasement();
+
+                break;
+        }
+    }
+
+
+    /* =====================================================
+       INTRO
+    ===================================================== */
+
+    function handleIntroRoom() {
 
         if (
-            activeDialogue.choices &&
-            activeDialogue.choices.length
+            hasStoryFlag(
+                "intro_seen"
+            )
         ) {
 
-            showChoices();
-
             return;
         }
 
 
-        finishDialogue();
-    }
-
-
-    /* =====================================================
-       SHOW CHOICES
-    ===================================================== */
-
-    function showChoices() {
-
-        waitingForChoice = true;
-
-
-        const choices =
-            document.getElementById(
-                "dialogue-choices"
-            );
-
-
-        if (!choices) {
-            return;
-        }
-
-
-        choices.innerHTML = "";
-
-
-        activeDialogue.choices.forEach(
-            choice => {
-
-                const button =
-                    document.createElement(
-                        "button"
-                    );
-
-
-                button.type = "button";
-
-                button.className =
-                    "dialogue-choice";
-
-
-                button.textContent =
-                    choice.text;
-
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        selectChoice(
-                            choice
-                        );
-                    }
-                );
-
-
-                choices.appendChild(
-                    button
-                );
-            }
-        );
-
-
-        updateDialogueHint();
-    }
-
-
-    /* =====================================================
-       SELECT CHOICE
-    ===================================================== */
-
-    function selectChoice(choice) {
-
-        if (!choice) {
-            return;
-        }
-
-
-        GameState.setChoice(
-            choice.id,
+        setStoryFlag(
+            "intro_seen",
             true
         );
 
 
-        applyConsequences(
-            choice.consequences
+        setObjective(
+            "Explore the house."
         );
-
-
-        waitingForChoice = false;
-
-
-        if (choice.next) {
-
-            startDialogue(
-                choice.next
-            );
-
-        } else {
-
-            finishDialogue();
-        }
     }
 
 
     /* =====================================================
-       APPLY CONSEQUENCES
+       HALLWAY
     ===================================================== */
 
-    function applyConsequences(
-        consequences
+    function handleHallway() {
+
+        if (
+            hasStoryFlag(
+                "hallway_seen"
+            )
+        ) {
+
+            return;
+        }
+
+
+        setStoryFlag(
+            "hallway_seen",
+            true
+        );
+
+
+        setObjective(
+            "Search the rooms for clues."
+        );
+
+
+        startDialogue({
+
+            textSpeed: 22,
+
+            lines: [
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "This hallway wasn't here before..."
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "Or maybe I just don't remember it."
+                }
+            ]
+        });
+    }
+
+
+    /* =====================================================
+       LIVING ROOM
+    ===================================================== */
+
+    function handleLivingRoom() {
+
+        if (
+            hasStoryFlag(
+                "living_room_seen"
+            )
+        ) {
+
+            return;
+        }
+
+
+        setStoryFlag(
+            "living_room_seen",
+            true
+        );
+
+
+        setObjective(
+            "Investigate the television."
+        );
+    }
+
+
+    /* =====================================================
+       KITCHEN
+    ===================================================== */
+
+    function handleKitchen() {
+
+        if (
+            hasStoryFlag(
+                "kitchen_seen"
+            )
+        ) {
+
+            return;
+        }
+
+
+        setStoryFlag(
+            "kitchen_seen",
+            true
+        );
+
+
+        setObjective(
+            "Search the kitchen."
+        );
+    }
+
+
+    /* =====================================================
+       BEDROOM
+    ===================================================== */
+
+    function handleBedroom() {
+
+        if (
+            hasStoryFlag(
+                "bedroom_seen"
+            )
+        ) {
+
+            return;
+        }
+
+
+        setStoryFlag(
+            "bedroom_seen",
+            true
+        );
+
+
+        setObjective(
+            "Read the diary."
+        );
+
+
+        startDialogue({
+
+            textSpeed: 22,
+
+            lines: [
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "Someone lived here."
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "But why does this room feel familiar?"
+                }
+            ]
+        });
+    }
+
+
+    /* =====================================================
+       BASEMENT
+    ===================================================== */
+
+    function handleBasement() {
+
+        if (
+            !hasStoryFlag(
+                "basement_unlocked"
+            )
+        ) {
+
+            setObjective(
+                "Find a way to restore power."
+            );
+
+            return;
+        }
+
+
+        if (
+            hasStoryFlag(
+                "generator_started"
+            )
+        ) {
+
+            return;
+        }
+
+
+        setObjective(
+            "Start the generator."
+        );
+    }
+
+
+    /* =====================================================
+       CLUE DISCOVERED
+    ===================================================== */
+
+    function discoverClue(
+        clueId
     ) {
 
-        if (!consequences) {
-            return;
+        setStoryFlag(
+            clueId,
+            true
+        );
+
+
+        switch (
+            clueId
+        ) {
+
+            case "television_message":
+
+                onTelevisionMessage();
+
+                break;
+
+
+            case "missing_person_diary":
+
+                onDiaryFound();
+
+                break;
         }
+    }
 
 
-        if (consequences.flags) {
+    /* =====================================================
+       TELEVISION
+    ===================================================== */
 
-            Object.entries(
-                consequences.flags
-            ).forEach(
-                ([flag, value]) => {
+    function onTelevisionMessage() {
 
-                    GameState.setFlag(
-                        flag,
-                        value
-                    );
+        setObjective(
+            "Find the missing person's diary."
+        );
+
+
+        startDialogue({
+
+            textSpeed: 18,
+
+            lines: [
+
+                {
+                    character:
+                        "TELEVISION",
+
+                    text:
+                        "DON'T TRUST THE LIGHT."
+                },
+
+                {
+                    character:
+                        "TELEVISION",
+
+                    text:
+                        "IT KNOWS WHERE YOU ARE."
                 }
-            );
-        }
+            ]
+        });
+    }
 
 
-        if (
-            typeof consequences.sanity ===
-            "number"
+    /* =====================================================
+       DIARY
+    ===================================================== */
+
+    function onDiaryFound() {
+
+        setStoryFlag(
+            "diary_found",
+            true
+        );
+
+
+        setObjective(
+            "Find the key to the basement."
+        );
+
+
+        startDialogue({
+
+            textSpeed: 20,
+
+            lines: [
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "These pages... they're about me."
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "That's impossible."
+                }
+            ]
+        });
+    }
+
+
+    /* =====================================================
+       ITEM OBTAINED
+    ===================================================== */
+
+    function onItemObtained(
+        itemId
+    ) {
+
+        switch (
+            itemId
         ) {
 
-            GameState.changeSanity(
-                consequences.sanity
-            );
-        }
+            case "small_key":
 
-
-        if (
-            typeof consequences.health ===
-            "number"
-        ) {
-
-            if (
-                consequences.health > 0
-            ) {
-
-                GameState.healPlayer(
-                    consequences.health
-                );
-
-            } else {
-
-                GameState.damagePlayer(
-                    Math.abs(
-                        consequences.health
+                if (
+                    hasStoryFlag(
+                        "diary_found"
                     )
+                ) {
+
+                    setObjective(
+                        "Return to the hallway."
+                    );
+                }
+
+                break;
+
+
+            case "basement_key":
+
+                setStoryFlag(
+                    "basement_unlocked",
+                    true
                 );
-            }
-        }
 
+
+                setObjective(
+                    "Enter the basement."
+                );
+
+                break;
+        }
+    }
+
+
+    /* =====================================================
+       GENERATOR
+    ===================================================== */
+
+    function onGeneratorActivated() {
+
+        setStoryFlag(
+            "generator_started",
+            true
+        );
+
+
+        setObjective(
+            "Return upstairs."
+        );
+
+
+        startDialogue({
+
+            textSpeed: 20,
+
+            lines: [
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "The power is back."
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "Then why is the darkness still here?"
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "..."
+                },
+
+                {
+                    character:
+                        "UNKNOWN",
+
+                    text:
+                        "Something is breathing."
+                }
+            ]
+        });
+    }
+
+
+    /* =====================================================
+       GENERIC INTERACTION
+    ===================================================== */
+
+    function onInteraction(
+        objectId
+    ) {
+
+        /*
+           Story events can be added here
+           without changing the interaction
+           engine.
+        */
 
         if (
-            Array.isArray(
-                consequences.addItems
+            objectId ===
+            "old-television"
+        ) {
+
+            discoverClue(
+                "television_message"
+            );
+        }
+    }
+
+
+    /* =====================================================
+       DIALOGUE END
+    ===================================================== */
+
+    function onDialogueEnd() {
+
+        /*
+           Story progression can be
+           evaluated after every dialogue.
+        */
+
+        evaluateProgress();
+    }
+
+
+    /* =====================================================
+       PROGRESSION
+    ===================================================== */
+
+    function evaluateProgress() {
+
+        if (
+            hasStoryFlag(
+                "generator_started"
+            ) &&
+            !hasStoryFlag(
+                "truth_started"
             )
         ) {
 
-            consequences.addItems.forEach(
-                item => {
+            currentChapter = 4;
 
-                    GameState.addItem(
-                        item
-                    );
-                }
+
+            setStoryFlag(
+                "truth_started",
+                true
+            );
+
+
+            setObjective(
+                "Discover the truth."
             );
         }
+    }
 
+
+    /* =====================================================
+       SET OBJECTIVE
+    ===================================================== */
+
+    function setObjective(
+        text
+    ) {
+
+        currentObjective =
+            text;
+
+
+        const element =
+            document.getElementById(
+                "objective-text"
+            );
+
+
+        if (element) {
+
+            element.textContent =
+                text;
+        }
+    }
+
+
+    /* =====================================================
+       STORY FLAGS
+    ===================================================== */
+
+    function setStoryFlag(
+        flag,
+        value
+    ) {
 
         if (
-            Array.isArray(
-                consequences.removeItems
-            )
+            typeof GameState.setStoryFlag ===
+            "function"
         ) {
 
-            consequences.removeItems.forEach(
-                item => {
-
-                    GameState.removeItem(
-                        item
-                    );
-                }
+            GameState.setStoryFlag(
+                flag,
+                value
             );
         }
     }
 
 
-    /* =====================================================
-       FINISH
-    ===================================================== */
-
-    function finishDialogue() {
-
-        const finishedDialogue =
-            activeDialogue;
-
+    function hasStoryFlag(
+        flag
+    ) {
 
         if (
-            finishedDialogue &&
-            finishedDialogue.consequences
+            typeof GameState.hasStoryFlag ===
+            "function"
         ) {
 
-            applyConsequences(
-                finishedDialogue.consequences
+            return GameState.hasStoryFlag(
+                flag
             );
         }
 
 
-        const nextDialogue =
-            finishedDialogue
-                ? finishedDialogue.next
-                : null;
-
-
-        activeDialogue = null;
-
-        dialogueIndex = 0;
-
-        waitingForChoice = false;
-
-
-        const container =
-            document.getElementById(
-                "dialogue-container"
-            );
-
-
-        if (container) {
-
-            container.classList.remove(
-                "active"
-            );
-        }
-
-
-        if (nextDialogue) {
-
-            startDialogue(
-                nextDialogue
-            );
-        }
+        return false;
     }
 
 
     /* =====================================================
-       DIALOGUE HINT
+       GENERATOR HOOK
     ===================================================== */
 
-    function updateDialogueHint() {
+    function onGeneratorActivatedHook() {
 
-        const hint =
-            document.getElementById(
-                "dialogue-hint"
-            );
-
-
-        if (!hint) {
-            return;
-        }
-
-
-        if (waitingForChoice) {
-
-            hint.textContent =
-                "SELECT AN OPTION";
-
-        } else {
-
-            hint.textContent =
-                "PRESS SPACE TO CONTINUE";
-        }
+        onGeneratorActivated();
     }
 
 
     /* =====================================================
-       IS DIALOGUE ACTIVE
+       CURRENT CHAPTER
     ===================================================== */
 
-    function isActive() {
+    function getCurrentChapter() {
 
-        return activeDialogue !== null;
+        return chapters[
+            currentChapter
+        ] || null;
     }
 
 
     /* =====================================================
-       IS WAITING FOR CHOICE
+       GET OBJECTIVE
     ===================================================== */
 
-    function isWaitingForChoice() {
+    function getObjective() {
 
-        return waitingForChoice;
-    }
-
-
-    /* =====================================================
-       INITIAL STORY
-    ===================================================== */
-
-    function startChapter1() {
-
-        GameState.set(
-            "chapter",
-            1
-        );
-
-        GameState.set(
-            "scene",
-            1
-        );
-
-
-        GameState.setObjective(
-            "intro_start",
-            "Find a way out",
-            "Something is wrong. Find out where you are."
-        );
-
-
-        startDialogue(
-            "intro_wake"
-        );
+        return currentObjective;
     }
 
 
@@ -720,18 +836,26 @@ const Story = (() => {
 
     return {
 
-        getChapter,
-        getDialogue,
+        initialize,
 
-        startDialogue,
-        next,
+        start,
 
-        selectChoice,
+        onRoomEnter,
 
-        isActive,
-        isWaitingForChoice,
+        discoverClue,
 
-        startChapter1
+        onItemObtained,
+
+        onGeneratorActivated:
+            onGeneratorActivatedHook,
+
+        onInteraction,
+
+        onDialogueEnd,
+
+        getCurrentChapter,
+
+        getObjective
     };
 
 })();
