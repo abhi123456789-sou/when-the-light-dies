@@ -1,33 +1,471 @@
 /* =========================================================
    WHEN THE LIGHT DIES
-   EVENT ENGINE
+   EVENTS ENGINE
+   Scripted Horror Events & Triggers
 ========================================================= */
 
 "use strict";
 
+
 const Events = (() => {
 
-    const events = new Map();
+    let initialized = false;
 
-    const activeEvents = new Set();
+    const activeTimers = new Map();
+
+    const triggeredEvents = new Set();
 
 
     /* =====================================================
-       REGISTER EVENT
+       EVENT DEFINITIONS
     ===================================================== */
 
-    function register(event) {
+    const eventData = {
 
-        if (
-            !event ||
-            !event.id
-        ) {
+        first_flicker: {
+
+            once: true,
+
+            trigger: {
+                type: "storyFlag",
+                flag: "story_started"
+            },
+
+            delay: 3000,
+
+            action: "flicker"
+        },
+
+
+        first_sound: {
+
+            once: true,
+
+            trigger: {
+                type: "storyFlag",
+                flag: "intro_seen"
+            },
+
+            delay: 7000,
+
+            action: "whisper"
+        },
+
+
+        hallway_presence: {
+
+            once: true,
+
+            trigger: {
+                type: "room",
+                room: "hallway"
+            },
+
+            delay: 5000,
+
+            action: "presence"
+        },
+
+
+        bedroom_event: {
+
+            once: true,
+
+            trigger: {
+                type: "room",
+                room: "bedroom"
+            },
+
+            delay: 4000,
+
+            action: "bedroomFear"
+        },
+
+
+        basement_event: {
+
+            once: true,
+
+            trigger: {
+                type: "room",
+                room: "basement"
+            },
+
+            delay: 3000,
+
+            action: "basementFear"
+        }
+    };
+
+
+    /* =====================================================
+       INITIALIZE
+    ===================================================== */
+
+    function initialize() {
+
+        if (initialized) {
+            return;
+        }
+
+        initialized = true;
+
+        triggeredEvents.clear();
+    }
+
+
+    /* =====================================================
+       UPDATE
+    ===================================================== */
+
+    function update(delta) {
+
+        if (!initialized) {
+            return;
+        }
+
+        /*
+           Timed events are handled through
+           window timers.
+
+           This update function is reserved
+           for future real-time event logic.
+        */
+    }
+
+
+    /* =====================================================
+       CHECK ALL EVENTS
+    ===================================================== */
+
+    function checkEvents() {
+
+        Object.entries(
+            eventData
+        ).forEach(
+            ([eventId, event]) => {
+
+                if (
+                    event.once &&
+                    triggeredEvents.has(
+                        eventId
+                    )
+                ) {
+
+                    return;
+                }
+
+
+                if (
+                    !checkTrigger(
+                        event.trigger
+                    )
+                ) {
+
+                    return;
+                }
+
+
+                scheduleEvent(
+                    eventId,
+                    event
+                );
+            }
+        );
+    }
+
+
+    /* =====================================================
+       CHECK TRIGGER
+    ===================================================== */
+
+    function checkTrigger(
+        trigger
+    ) {
+
+        if (!trigger) {
             return false;
         }
 
 
-        events.set(
-            event.id,
+        switch (
+            trigger.type
+        ) {
+
+            case "storyFlag":
+
+                if (
+                    typeof GameState.hasStoryFlag ===
+                    "function"
+                ) {
+
+                    return GameState.hasStoryFlag(
+                        trigger.flag
+                    );
+                }
+
+
+                if (
+                    typeof GameState.hasFlag ===
+                    "function"
+                ) {
+
+                    return GameState.hasFlag(
+                        trigger.flag
+                    );
+                }
+
+
+                return false;
+
+
+            case "room":
+
+                if (
+                    typeof World ===
+                    "undefined"
+                ) {
+
+                    return false;
+                }
+
+
+                const room =
+                    World.getCurrentRoom();
+
+
+                return (
+                    room &&
+                    room.id ===
+                    trigger.room
+                );
+
+
+            case "item":
+
+                if (
+                    typeof GameState.hasItem ===
+                    "function"
+                ) {
+
+                    return GameState.hasItem(
+                        trigger.item
+                    );
+                }
+
+
+                return false;
+
+
+            default:
+
+                return false;
+        }
+    }
+
+
+    /* =====================================================
+       SCHEDULE EVENT
+    ===================================================== */
+
+    function scheduleEvent(
+        eventId,
+        event
+    ) {
+
+        if (
+            activeTimers.has(
+                eventId
+            )
+        ) {
+
+            return;
+        }
+
+
+        const delay =
+            Number(event.delay) || 0;
+
+
+        const timer =
+            window.setTimeout(
+                () => {
+
+                    activeTimers.delete(
+                        eventId
+                    );
+
+
+                    if (
+                        event.once
+                    ) {
+
+                        triggeredEvents.add(
+                            eventId
+                        );
+                    }
+
+
+                    executeEvent(
+                        eventId,
+                        event
+                    );
+
+                },
+                delay
+            );
+
+
+        activeTimers.set(
+            eventId,
+            timer
+        );
+    }
+
+
+    /* =====================================================
+       EXECUTE EVENT
+    ===================================================== */
+
+    function executeEvent(
+        eventId,
+        event
+    ) {
+
+        if (!event) {
+            return;
+        }
+
+
+        switch (
+            event.action
+        ) {
+
+            case "flicker":
+
+                flickerLights();
+
+                break;
+
+
+            case "whisper":
+
+                whisper();
+
+                break;
+
+
+            case "presence":
+
+                hallwayPresence();
+
+                break;
+
+
+            case "bedroomFear":
+
+                bedroomFear();
+
+                break;
+
+
+            case "basementFear":
+
+                basementFear();
+
+                break;
+
+
+            default:
+
+                console.warn(
+                    "Unknown event:",
+                    eventId
+                );
+
+                break;
+        }
+    }
+
+
+    /* =====================================================
+       ROOM ENTER
+    ===================================================== */
+
+    function onRoomEnter(
+        roomId
+    ) {
+
+        checkEvents();
+
+
+        /*
+           Direct room-specific triggers.
+        */
+
+        switch (
+            roomId
+        ) {
+
+            case "hallway":
+
+                trigger(
+                    "hallway_presence"
+                );
+
+                break;
+
+
+            case "bedroom":
+
+                trigger(
+                    "bedroom_event"
+                );
+
+                break;
+
+
+            case "basement":
+
+                trigger(
+                    "basement_event"
+                );
+
+                break;
+        }
+    }
+
+
+    /* =====================================================
+       MANUAL TRIGGER
+    ===================================================== */
+
+    function trigger(
+        eventId
+    ) {
+
+        const event =
+            eventData[eventId];
+
+
+        if (!event) {
+            return false;
+        }
+
+
+        if (
+            event.once &&
+            triggeredEvents.has(
+                eventId
+            )
+        ) {
+
+            return false;
+        }
+
+
+        scheduleEvent(
+            eventId,
             event
         );
 
@@ -37,567 +475,315 @@ const Events = (() => {
 
 
     /* =====================================================
-       GET EVENT
+       LIGHT FLICKER
     ===================================================== */
 
-    function get(eventId) {
+    function flickerLights() {
 
-        return events.get(
-            eventId
-        );
-    }
-
-
-    /* =====================================================
-       CONDITION CHECK
-    ===================================================== */
-
-    function checkConditions(
-        conditions
-    ) {
-
-        if (!conditions) {
-            return true;
-        }
+        const effects =
+            document.getElementById(
+                "world-effects"
+            );
 
 
-        /* =========================
-           FLAGS
-        ========================== */
-
-        if (conditions.flags) {
-
-            for (
-                const [flag, expected]
-                of Object.entries(
-                    conditions.flags
-                )
-            ) {
-
-                const actual =
-                    GameState.getValue(
-                        `story.flags.${flag}`
-                    );
-
-
-                if (
-                    actual !== expected
-                ) {
-
-                    return false;
-                }
-            }
-        }
-
-
-        /* =========================
-           ITEMS
-        ========================== */
-
-        if (
-            Array.isArray(
-                conditions.hasItems
-            )
-        ) {
-
-            for (
-                const item
-                of conditions.hasItems
-            ) {
-
-                if (
-                    !GameState.hasItem(
-                        item
-                    )
-                ) {
-
-                    return false;
-                }
-            }
-        }
-
-
-        /* =========================
-           NOT ITEMS
-        ========================== */
-
-        if (
-            Array.isArray(
-                conditions.missingItems
-            )
-        ) {
-
-            for (
-                const item
-                of conditions.missingItems
-            ) {
-
-                if (
-                    GameState.hasItem(
-                        item
-                    )
-                ) {
-
-                    return false;
-                }
-            }
-        }
-
-
-        /* =========================
-           ROOM
-        ========================== */
-
-        if (
-            conditions.room &&
-            GameState.getValue(
-                "currentRoom"
-            ) !== conditions.room
-        ) {
-
-            return false;
-        }
-
-
-        /* =========================
-           CHAPTER
-        ========================== */
-
-        if (
-            typeof conditions.chapter ===
-            "number"
-        ) {
-
-            if (
-                GameState.getValue(
-                    "chapter"
-                ) !== conditions.chapter
-            ) {
-
-                return false;
-            }
-        }
-
-
-        /* =========================
-           SANITY
-        ========================== */
-
-        if (
-            typeof conditions.minSanity ===
-            "number"
-        ) {
-
-            if (
-                GameState.getValue(
-                    "player.sanity"
-                ) < conditions.minSanity
-            ) {
-
-                return false;
-            }
-        }
-
-
-        if (
-            typeof conditions.maxSanity ===
-            "number"
-        ) {
-
-            if (
-                GameState.getValue(
-                    "player.sanity"
-                ) > conditions.maxSanity
-            ) {
-
-                return false;
-            }
-        }
-
-
-        return true;
-    }
-
-
-    /* =====================================================
-       EXECUTE ACTION
-    ===================================================== */
-
-    function executeAction(
-        action
-    ) {
-
-        if (!action) {
+        if (!effects) {
             return;
         }
 
 
-        /* =========================
-           FLAGS
-        ========================== */
+        let count = 0;
 
-        if (action.setFlags) {
+        const total =
+            6;
 
-            Object.entries(
-                action.setFlags
-            ).forEach(
-                ([flag, value]) => {
 
-                    GameState.setFlag(
-                        flag,
-                        value
+        const flickerTimer =
+            window.setInterval(
+                () => {
+
+                    effects.classList.toggle(
+                        "light-flicker"
                     );
-                }
+
+
+                    count++;
+
+
+                    if (
+                        count >= total
+                    ) {
+
+                        window.clearInterval(
+                            flickerTimer
+                        );
+
+
+                        effects.classList.remove(
+                            "light-flicker"
+                        );
+                    }
+
+                },
+                120
             );
-        }
 
 
-        /* =========================
-           ITEMS
-        ========================== */
+        changeSanity(
+            -1
+        );
+    }
+
+
+    /* =====================================================
+       WHISPER
+    ===================================================== */
+
+    function whisper() {
+
+        notify(
+            "You hear a whisper behind you."
+        );
+
+
+        changeSanity(
+            -2
+        );
+
+
+        setStoryFlag(
+            "heard_whisper",
+            true
+        );
+    }
+
+
+    /* =====================================================
+       HALLWAY PRESENCE
+    ===================================================== */
+
+    function hallwayPresence() {
+
+        notify(
+            "Something moved at the end of the hallway."
+        );
+
+
+        changeSanity(
+            -3
+        );
+
+
+        setStoryFlag(
+            "hallway_presence_seen",
+            true
+        );
+
+
+        /*
+           Future:
+           spawn entity / shadow / enemy.
+        */
+    }
+
+
+    /* =====================================================
+       BEDROOM FEAR
+    ===================================================== */
+
+    function bedroomFear() {
+
+        notify(
+            "The room suddenly feels colder."
+        );
+
+
+        changeSanity(
+            -4
+        );
+
+
+        setStoryFlag(
+            "bedroom_fear",
+            true
+        );
+    }
+
+
+    /* =====================================================
+       BASEMENT FEAR
+    ===================================================== */
+
+    function basementFear() {
+
+        notify(
+            "Something is moving in the darkness."
+        );
+
+
+        changeSanity(
+            -5
+        );
+
+
+        setStoryFlag(
+            "basement_fear",
+            true
+        );
+    }
+
+
+    /* =====================================================
+       SANITY
+    ===================================================== */
+
+    function changeSanity(
+        amount
+    ) {
 
         if (
-            Array.isArray(
-                action.addItems
-            )
-        ) {
-
-            action.addItems.forEach(
-                item => {
-
-                    GameState.addItem(
-                        item
-                    );
-                }
-            );
-        }
-
-
-        if (
-            Array.isArray(
-                action.removeItems
-            )
-        ) {
-
-            action.removeItems.forEach(
-                item => {
-
-                    GameState.removeItem(
-                        item
-                    );
-                }
-            );
-        }
-
-
-        /* =========================
-           HEALTH
-        ========================== */
-
-        if (
-            typeof action.damage ===
-            "number"
-        ) {
-
-            GameState.damagePlayer(
-                action.damage
-            );
-        }
-
-
-        if (
-            typeof action.heal ===
-            "number"
-        ) {
-
-            GameState.healPlayer(
-                action.heal
-            );
-        }
-
-
-        /* =========================
-           SANITY
-        ========================== */
-
-        if (
-            typeof action.sanity ===
-            "number"
+            typeof GameState.changeSanity ===
+            "function"
         ) {
 
             GameState.changeSanity(
-                action.sanity
-            );
-        }
-
-
-        /* =========================
-           ROOM
-        ========================== */
-
-        if (action.changeRoom) {
-
-            GameState.changeRoom(
-                action.changeRoom
-            );
-        }
-
-
-        /* =========================
-           OBJECTIVE
-        ========================== */
-
-        if (action.objective) {
-
-            GameState.setObjective(
-                action.objective.id,
-                action.objective.title,
-                action.objective.description
-            );
-        }
-
-
-        /* =========================
-           DIALOGUE
-        ========================== */
-
-        if (action.dialogue) {
-
-            Story.startDialogue(
-                action.dialogue
-            );
-        }
-
-
-        /* =========================
-           EVENT
-        ========================== */
-
-        if (action.triggerEvent) {
-
-            trigger(
-                action.triggerEvent
+                amount
             );
         }
     }
 
 
     /* =====================================================
-       TRIGGER EVENT
+       STORY FLAG
     ===================================================== */
 
-    function trigger(eventId) {
+    function setStoryFlag(
+        flag,
+        value = true
+    ) {
 
-        const event =
-            get(eventId);
+        if (
+            typeof GameState.setStoryFlag ===
+            "function"
+        ) {
 
-
-        if (!event) {
-
-            console.warn(
-                "Event not found:",
-                eventId
+            GameState.setStoryFlag(
+                flag,
+                value
             );
 
-            return false;
+            return;
         }
 
 
         if (
-            GameState.hasEventTriggered(
-                eventId
-            )
+            typeof GameState.setFlag ===
+            "function"
         ) {
 
-            return false;
+            GameState.setFlag(
+                flag,
+                value
+            );
         }
+    }
 
+
+    /* =====================================================
+       NOTIFICATION
+    ===================================================== */
+
+    function notify(
+        message
+    ) {
 
         if (
-            !checkConditions(
-                event.conditions
-            )
+            typeof Interaction !==
+            "undefined" &&
+            typeof Interaction.notify ===
+            "function"
         ) {
 
-            return false;
-        }
-
-
-        GameState.markEventTriggered(
-            eventId
-        );
-
-
-        activeEvents.add(
-            eventId
-        );
-
-
-        if (event.action) {
-
-            executeAction(
-                event.action
+            Interaction.notify(
+                message
             );
+
+            return;
         }
 
 
-        if (event.completed !== false) {
-
-            GameState.markEventCompleted(
-                eventId
+        const container =
+            document.getElementById(
+                "notification-container"
             );
+
+
+        if (!container) {
+            return;
         }
 
 
-        activeEvents.delete(
-            eventId
+        const notification =
+            document.createElement(
+                "div"
+            );
+
+
+        notification.className =
+            "game-notification";
+
+
+        notification.textContent =
+            message;
+
+
+        container.appendChild(
+            notification
         );
 
 
-        return true;
+        window.setTimeout(
+            () => {
+
+                notification.remove();
+
+            },
+            2500
+        );
     }
 
 
     /* =====================================================
-       FORCE EVENT
+       RESET EVENTS
     ===================================================== */
 
-    function force(eventId) {
+    function reset() {
 
-        const event =
-            get(eventId);
+        activeTimers.forEach(
+            timer => {
 
-
-        if (!event) {
-            return false;
-        }
-
-
-        if (event.action) {
-
-            executeAction(
-                event.action
-            );
-        }
+                window.clearTimeout(
+                    timer
+                );
+            }
+        );
 
 
-        return true;
+        activeTimers.clear();
+
+        triggeredEvents.clear();
     }
 
 
     /* =====================================================
-       REGISTER DEFAULT EVENTS
+       GET EVENT STATE
     ===================================================== */
 
-    function initialize() {
+    function hasTriggered(
+        eventId
+    ) {
 
-        register({
-
-            id: "intro_start",
-
-            conditions: {
-                chapter: 1,
-                room: "intro"
-            },
-
-            action: {
-
-                setFlags: {
-                    introStarted: true
-                },
-
-                objective: {
-
-                    id: "intro_start",
-
-                    title:
-                        "Find a way out",
-
-                    description:
-                        "Something is wrong. Find out where you are."
-                }
-            }
-        });
-
-
-        register({
-
-            id: "low_sanity_warning",
-
-            conditions: {
-
-                maxSanity: 25
-            },
-
-            action: {
-
-                setFlags: {
-                    lowSanityReached: true
-                },
-
-                sanity: -2
-            }
-        });
-
-
-        register({
-
-            id: "first_darkness",
-
-            conditions: {
-
-                flags: {
-                    introStarted: true
-                }
-            },
-
-            action: {
-
-                setFlags: {
-                    darknessExperienced: true
-                }
-            }
-        });
-    }
-
-
-    /* =====================================================
-       CHECK ALL EVENTS
-    ===================================================== */
-
-    function update() {
-
-        events.forEach(
-            event => {
-
-                if (
-                    !GameState.hasEventTriggered(
-                        event.id
-                    )
-                ) {
-
-                    if (
-                        checkConditions(
-                            event.conditions
-                        )
-                    ) {
-
-                        /*
-                           Only automatically trigger
-                           explicitly automatic events.
-                        */
-
-                        if (
-                            event.auto === true
-                        ) {
-
-                            trigger(
-                                event.id
-                            );
-                        }
-                    }
-                }
-            }
+        return triggeredEvents.has(
+            eventId
         );
     }
 
@@ -610,17 +796,17 @@ const Events = (() => {
 
         initialize,
 
-        register,
+        update,
 
-        get,
+        checkEvents,
+
+        onRoomEnter,
 
         trigger,
 
-        force,
+        reset,
 
-        update,
-
-        checkConditions
+        hasTriggered
     };
 
 })();
