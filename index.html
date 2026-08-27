@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="WHEN THE LIGHT DIES - A story-driven psychological horror game."
+    >
+
+    <title>WHEN THE LIGHT DIES</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- =====================================================
+         GAME ROOT
+    ====================================================== -->
+
+    <main id="game">
+
+        <!-- =================================================
+             LOADING SCREEN
+        ================================================== -->
+
+        <section
+            id="loading-screen"
+            class="screen active"
+            aria-label="Loading game"
+        >
+            <div class="loading-content">
+                <h1>WHEN THE LIGHT DIES</h1>
+                <p>Loading...</p>
+
+                <div class="loading-bar">
+                    <div id="loading-progress"></div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- =================================================
+             MAIN MENU
+        ================================================== -->
+
+        <section
+            id="main-menu"
+            class="screen"
+            aria-label="Main menu"
+        >
+
+            <div class="menu-overlay"></div>
+
+            <div class="menu-content">
+
+                <p class="game-subtitle">
+                    A STORY-DRIVEN PSYCHOLOGICAL HORROR
+                </p>
+
+                <h1 class="game-title">
+                    WHEN THE<br>
+                    <span>LIGHT DIES</span>
+                </h1>
+
+                <div class="menu-buttons">
+
+                    <button
+                        id="btn-new-game"
+                        type="button"
+                    >
+                        NEW GAME
+                    </button>
+
+                    <button
+                        id="btn-continue"
+                        type="button"
+                    >
+                        CONTINUE
+                    </button>
+
+                    <button
+                        id="btn-load-game"
+                        type="button"
+                    >
+                        LOAD GAME
+                    </button>
+
+                    <button
+                        id="btn-settings"
+                        type="button"
+                    >
+                        SETTINGS
+                    </button>
+
+                    <button
+                        id="btn-credits"
+                        type="button"
+                    >
+                        CREDITS
+                    </button>
+
+                </div>
+
+                <p class="menu-version">
+                    Version 0.1.0
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             GAME SCREEN
+        ================================================== -->
+
+        <section
+            id="game-screen"
+            class="screen"
+            aria-label="Game"
+        >
+
+            <!-- =============================================
+                 WORLD / GAME VIEW
+            ============================================== -->
+
+            <div
+                id="world"
+                class="game-layer"
+            >
+
+                <div
+                    id="world-background"
+                    class="world-background"
+                ></div>
+
+                <div
+                    id="world-overlay"
+                    class="world-overlay"
+                ></div>
+
+                <div
+                    id="world-effects"
+                    class="world-effects"
+                ></div>
+
+            </div>
+
+
+            <!-- =============================================
+                 LIGHT / DARKNESS SYSTEM
+            ============================================== -->
+
+            <div
+                id="darkness"
+                class="darkness-layer"
+            ></div>
+
+            <div
+                id="flashlight"
+                class="flashlight-layer"
+            ></div>
+
+
+            <!-- =============================================
+                 HUD
+            ============================================== -->
+
+            <div
+                id="hud"
+                class="hud"
+            >
+
+                <!-- TOP LEFT -->
+
+                <div class="hud-left">
+
+                    <div
+                        id="objective-panel"
+                        class="hud-panel"
+                    >
+                        <span class="hud-label">
+                            OBJECTIVE
+                        </span>
+
+                        <p id="objective-text">
+                            ...
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <!-- TOP RIGHT -->
+
+                <div class="hud-right">
+
+                    <div
+                        id="clock-panel"
+                        class="hud-panel"
+                    >
+                        <span class="hud-label">
+                            TIME
+                        </span>
+
+                        <span id="game-time">
+                            00:00
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <!-- BOTTOM LEFT -->
+
+                <div class="status-panel">
+
+                    <div class="status-item">
+
+                        <span class="status-label">
+                            HEALTH
+                        </span>
+
+                        <div class="status-bar">
+                            <div
+                                id="health-bar"
+                                class="status-fill"
+                            ></div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="status-item">
+
+                        <span class="status-label">
+                            SANITY
+                        </span>
+
+                        <div class="status-bar">
+                            <div
+                                id="sanity-bar"
+                                class="status-fill"
+                            ></div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="status-item">
+
+                        <span class="status-label">
+                            BATTERY
+                        </span>
+
+                        <div class="status-bar">
+                            <div
+                                id="battery-bar"
+                                class="status-fill"
+                            ></div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CENTER -->
+
+                <div
+                    id="interaction-prompt"
+                    class="interaction-prompt"
+                >
+                    <span id="interaction-key">
+                        E
+                    </span>
+
+                    <span id="interaction-text">
+                        INTERACT
+                    </span>
+                </div>
+
+
+                <!-- BOTTOM RIGHT -->
+
+                <div
+                    id="inventory-panel"
+                    class="inventory-panel"
+                >
+
+                    <div class="inventory-header">
+                        INVENTORY
+                    </div>
+
+                    <div
+                        id="inventory-slots"
+                        class="inventory-slots"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 DIALOGUE SYSTEM
+            ============================================== -->
+
+            <div
+                id="dialogue-container"
+                class="dialogue-container"
+            >
+
+                <div class="dialogue-box">
+
+                    <div
+                        id="dialogue-character"
+                        class="dialogue-character"
+                    >
+                        UNKNOWN
+                    </div>
+
+                    <div
+                        id="dialogue-text"
+                        class="dialogue-text"
+                    ></div>
+
+                    <div
+                        id="dialogue-choices"
+                        class="dialogue-choices"
+                    ></div>
+
+                    <div class="dialogue-footer">
+                        <span id="dialogue-hint">
+                            PRESS SPACE TO CONTINUE
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 NOTIFICATION SYSTEM
+            ============================================== -->
+
+            <div
+                id="notification-container"
+                class="notification-container"
+            ></div>
+
+
+            <!-- =============================================
+                 FADE / TRANSITION
+            ============================================== -->
+
+            <div
+                id="screen-transition"
+                class="screen-transition"
+            ></div>
+
+
+            <!-- =============================================
+                 PAUSE MENU
+            ============================================== -->
+
+            <div
+                id="pause-menu"
+                class="overlay-menu"
+            >
+
+                <div class="overlay-content">
+
+                    <h2>PAUSED</h2>
+
+                    <button
+                        id="btn-resume"
+                        type="button"
+                    >
+                        RESUME
+                    </button>
+
+                    <button
+                        id="btn-save"
+                        type="button"
+                    >
+                        SAVE GAME
+                    </button>
+
+                    <button
+                        id="btn-pause-settings"
+                        type="button"
+                    >
+                        SETTINGS
+                    </button>
+
+                    <button
+                        id="btn-main-menu"
+                        type="button"
+                    >
+                        MAIN MENU
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 INVENTORY SCREEN
+            ============================================== -->
+
+            <div
+                id="inventory-screen"
+                class="overlay-menu"
+            >
+
+                <div class="overlay-content inventory-screen-content">
+
+                    <h2>INVENTORY</h2>
+
+                    <div
+                        id="full-inventory"
+                        class="full-inventory"
+                    ></div>
+
+                    <button
+                        id="btn-close-inventory"
+                        type="button"
+                    >
+                        CLOSE
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 DEATH SCREEN
+            ============================================== -->
+
+            <div
+                id="death-screen"
+                class="screen death-screen"
+            >
+
+                <div class="death-content">
+
+                    <p class="death-small">
+                        THE LIGHT HAS GONE OUT
+                    </p>
+
+                    <h2>
+                        YOU DIED
+                    </h2>
+
+                    <button
+                        id="btn-retry"
+                        type="button"
+                    >
+                        TRY AGAIN
+                    </button>
+
+                    <button
+                        id="btn-death-menu"
+                        type="button"
+                    >
+                        MAIN MENU
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 ENDING SCREEN
+            ============================================== -->
+
+            <div
+                id="ending-screen"
+                class="screen ending-screen"
+            >
+
+                <div class="ending-content">
+
+                    <p id="ending-label">
+                        END
+                    </p>
+
+                    <h2 id="ending-title">
+                        THE END
+                    </h2>
+
+                    <p id="ending-description"></p>
+
+                    <button
+                        id="btn-ending-continue"
+                        type="button"
+                    >
+                        CONTINUE
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             SETTINGS
+        ================================================== -->
+
+        <section
+            id="settings-screen"
+            class="screen"
+            aria-label="Settings"
+        >
+
+            <div class="settings-content">
+
+                <h2>SETTINGS</h2>
+
+                <div class="setting-row">
+
+                    <label for="master-volume">
+                        MASTER VOLUME
+                    </label>
+
+                    <input
+                        id="master-volume"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value="100"
+                    >
+
+                </div>
+
+
+                <div class="setting-row">
+
+                    <label for="music-volume">
+                        MUSIC VOLUME
+                    </label>
+
+                    <input
+                        id="music-volume"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value="70"
+                    >
+
+                </div>
+
+
+                <div class="setting-row">
+
+                    <label for="sfx-volume">
+                        SFX VOLUME
+                    </label>
+
+                    <input
+                        id="sfx-volume"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value="80"
+                    >
+
+                </div>
+
+
+                <div class="setting-row">
+
+                    <label for="brightness">
+                        BRIGHTNESS
+                    </label>
+
+                    <input
+                        id="brightness"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value="50"
+                    >
+
+                </div>
+
+
+                <button
+                    id="btn-settings-back"
+                    type="button"
+                >
+                    BACK
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             CREDITS
+        ================================================== -->
+
+        <section
+            id="credits-screen"
+            class="screen"
+            aria-label="Credits"
+        >
+
+            <div class="credits-content">
+
+                <h2>WHEN THE LIGHT DIES</h2>
+
+                <p>
+                    A Story-Driven Horror Experience
+                </p>
+
+                <div class="credits-spacer"></div>
+
+                <p>
+                    Developed with HTML, CSS & JavaScript
+                </p>
+
+                <p>
+                    © 2026
+                </p>
+
+                <button
+                    id="btn-credits-back"
+                    type="button"
+                >
+                    BACK
+                </button>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =====================================================
+         JAVASCRIPT ENTRY POINT
+         JS WILL BE CONNECTED AFTER THE ENGINE IS CREATED.
+    ====================================================== -->
+
+    <script
+        src="js/main.js"
+        defer
+    ></script>
+
+</body>
+</html>
