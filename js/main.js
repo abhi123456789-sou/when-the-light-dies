@@ -1,7 +1,7 @@
 /* =========================================================
    WHEN THE LIGHT DIES
    MAIN GAME ENGINE
-   Version 0.1.0
+   Version 0.1.1
 ========================================================= */
 
 "use strict";
@@ -14,7 +14,9 @@
 const Game = (() => {
 
     let initialized = false;
+
     let lastTime = 0;
+
     let animationFrame = null;
 
 
@@ -148,8 +150,10 @@ const Game = (() => {
 
         hideAllScreens();
 
+
         const screen =
             document.getElementById(id);
+
 
         if (screen) {
 
@@ -191,6 +195,7 @@ const Game = (() => {
 
                     clearInterval(timer);
 
+
                     setTimeout(
                         () => {
 
@@ -215,11 +220,14 @@ const Game = (() => {
             "main-menu"
         );
 
+
         hidePauseMenu();
 
-        hideInventoryScreen();
+        closeInventory();
 
         hideDialogue();
+
+        hideInteractionPrompt();
     }
 
 
@@ -228,6 +236,10 @@ const Game = (() => {
     ===================================================== */
 
     function startNewGame() {
+
+        /*
+           GameState is required.
+        */
 
         if (
             typeof GameState ===
@@ -238,156 +250,249 @@ const Game = (() => {
                 "GameState is not loaded."
             );
 
+            notify(
+                "GameState is not loaded.",
+                "error"
+            );
+
             return;
         }
 
 
-        GameState.reset();
+        /*
+           Reset the complete game state.
+        */
 
+        if (
+            typeof GameState.reset ===
+            "function"
+        ) {
+
+            GameState.reset();
+        }
+
+
+        /*
+           Initialize player.
+        */
 
         if (
             typeof Player !==
-            "undefined"
+            "undefined" &&
+            typeof Player.initialize ===
+            "function"
         ) {
 
             Player.initialize();
         }
 
 
+        /*
+           Initialize input.
+        */
+
+        if (
+            typeof Input !==
+            "undefined" &&
+            typeof Input.initialize ===
+            "function"
+        ) {
+
+            Input.initialize();
+        }
+
+
+        /*
+           Initialize interaction.
+        */
+
+        if (
+            typeof Interaction !==
+            "undefined" &&
+            typeof Interaction.initialize ===
+            "function"
+        ) {
+
+            Interaction.initialize();
+        }
+
+
+        /*
+           Initialize events.
+        */
+
         if (
             typeof Events !==
-            "undefined"
+            "undefined" &&
+            typeof Events.initialize ===
+            "function"
         ) {
 
             Events.initialize();
         }
 
 
+        /*
+           Initialize world.
+        */
+
         if (
             typeof World !==
-            "undefined"
+            "undefined" &&
+            typeof World.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof World.initialize ===
-                "function"
-            ) {
-
-                World.initialize();
-            }
+            World.initialize();
         }
 
+
+        /*
+           Initialize inventory.
+        */
 
         if (
             typeof Inventory !==
-            "undefined"
+            "undefined" &&
+            typeof Inventory.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof Inventory.initialize ===
-                "function"
-            ) {
-
-                Inventory.initialize();
-            }
+            Inventory.initialize();
         }
 
+
+        /*
+           Initialize puzzles.
+        */
 
         if (
             typeof Puzzles !==
-            "undefined"
+            "undefined" &&
+            typeof Puzzles.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof Puzzles.initialize ===
-                "function"
-            ) {
-
-                Puzzles.initialize();
-            }
+            Puzzles.initialize();
         }
 
+
+        /*
+           Initialize horror.
+        */
 
         if (
             typeof Horror !==
-            "undefined"
+            "undefined" &&
+            typeof Horror.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof Horror.initialize ===
-                "function"
-            ) {
-
-                Horror.initialize();
-            }
+            Horror.initialize();
         }
 
+
+        /*
+           Initialize enemy AI.
+        */
 
         if (
             typeof EnemyAI !==
-            "undefined"
+            "undefined" &&
+            typeof EnemyAI.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof EnemyAI.initialize ===
-                "function"
-            ) {
-
-                EnemyAI.initialize();
-            }
+            EnemyAI.initialize();
         }
 
+
+        /*
+           Initialize audio.
+        */
 
         if (
             typeof AudioSystem !==
-            "undefined"
+            "undefined" &&
+            typeof AudioSystem.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof AudioSystem.initialize ===
-                "function"
-            ) {
-
-                AudioSystem.initialize();
-            }
+            AudioSystem.initialize();
         }
 
+
+        /*
+           Initialize endings.
+        */
 
         if (
             typeof Endings !==
-            "undefined"
+            "undefined" &&
+            typeof Endings.initialize ===
+            "function"
         ) {
 
-            if (
-                typeof Endings.initialize ===
-                "function"
-            ) {
-
-                Endings.initialize();
-            }
+            Endings.initialize();
         }
 
 
-        GameState.startGame();
+        /*
+           Start game.
+        */
 
+        if (
+            typeof GameState.startGame ===
+            "function"
+        ) {
+
+            GameState.startGame();
+
+        } else {
+
+            console.error(
+                "GameState.startGame() is missing."
+            );
+
+            notify(
+                "Unable to start game.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        /*
+           Show game screen.
+        */
 
         showScreen(
             "game-screen"
         );
 
 
+        hidePauseMenu();
+
+        closeInventory();
+
+        hideDialogue();
+
+        hideInteractionPrompt();
+
+
+        /*
+           Start Chapter 1.
+        */
+
         if (
             typeof Story !==
-            "undefined"
+            "undefined" &&
+            typeof Story.startChapter1 ===
+            "function"
         ) {
 
-            if (
-                typeof Story.startChapter1 ===
-                "function"
-            ) {
-
-                Story.startChapter1();
-            }
+            Story.startChapter1();
         }
 
 
@@ -402,7 +507,7 @@ const Game = (() => {
 
 
     /* =====================================================
-       CONTINUE
+       CONTINUE GAME
     ===================================================== */
 
     function continueGame() {
@@ -410,6 +515,20 @@ const Game = (() => {
         if (
             typeof SaveSystem ===
             "undefined"
+        ) {
+
+            notify(
+                "Save system unavailable.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (
+            typeof SaveSystem.load !==
+            "function"
         ) {
 
             notify(
@@ -441,7 +560,44 @@ const Game = (() => {
         );
 
 
-        GameState.startGame();
+        hidePauseMenu();
+
+        closeInventory();
+
+        hideDialogue();
+
+
+        if (
+            typeof GameState !==
+            "undefined" &&
+            typeof GameState.startGame ===
+            "function"
+        ) {
+
+            GameState.startGame();
+        }
+
+
+        if (
+            typeof Input !==
+            "undefined" &&
+            typeof Input.initialize ===
+            "function"
+        ) {
+
+            Input.initialize();
+        }
+
+
+        if (
+            typeof Interaction !==
+            "undefined" &&
+            typeof Interaction.initialize ===
+            "function"
+        ) {
+
+            Interaction.initialize();
+        }
 
 
         updateUI();
@@ -449,14 +605,16 @@ const Game = (() => {
 
 
     /* =====================================================
-       SAVE
+       SAVE GAME
     ===================================================== */
 
     function saveGame() {
 
         if (
             typeof SaveSystem ===
-            "undefined"
+            "undefined" ||
+            typeof SaveSystem.save !==
+            "function"
         ) {
 
             return false;
@@ -486,11 +644,21 @@ const Game = (() => {
 
     function togglePause() {
 
+        if (
+            typeof GameState ===
+            "undefined"
+        ) {
+
+            return;
+        }
+
+
         const state =
             GameState.get();
 
 
         if (
+            !state ||
             !state.gameStarted ||
             state.gameOver
         ) {
@@ -514,7 +682,16 @@ const Game = (() => {
 
     function pauseGame() {
 
-        GameState.pause();
+        if (
+            typeof GameState !==
+            "undefined" &&
+            typeof GameState.pause ===
+            "function"
+        ) {
+
+            GameState.pause();
+        }
+
 
         showPauseMenu();
     }
@@ -522,7 +699,16 @@ const Game = (() => {
 
     function resumeGame() {
 
-        GameState.resume();
+        if (
+            typeof GameState !==
+            "undefined" &&
+            typeof GameState.resume ===
+            "function"
+        ) {
+
+            GameState.resume();
+        }
+
 
         hidePauseMenu();
     }
@@ -556,13 +742,24 @@ const Game = (() => {
 
     function toggleInventory() {
 
+        if (
+            typeof GameState ===
+            "undefined"
+        ) {
+
+            return;
+        }
+
+
         const state =
             GameState.get();
 
 
         if (
+            !state ||
             !state.gameStarted ||
-            state.gameOver
+            state.gameOver ||
+            state.gamePaused
         ) {
 
             return;
@@ -640,7 +837,16 @@ const Game = (() => {
 
     function returnToMenu() {
 
-        GameState.pause();
+        if (
+            typeof GameState !==
+            "undefined" &&
+            typeof GameState.pause ===
+            "function"
+        ) {
+
+            GameState.pause();
+        }
+
 
         showMainMenu();
     }
@@ -678,186 +884,189 @@ const Game = (() => {
             Story.isActive()
         ) {
 
-            Story.next();
+            if (
+                typeof Story.next ===
+                "function"
+            ) {
+
+                Story.next();
+            }
+        }
+    }
+
+
+    /* =====================================================
+       INTERACTION PROMPT
+    ===================================================== */
+
+    function hideInteractionPrompt() {
+
+        if (
+            typeof Interaction !==
+            "undefined" &&
+            typeof Interaction.getCurrentTarget ===
+            "function"
+        ) {
+
+            if (
+                !Interaction.getCurrentTarget()
+            ) {
+
+                if (
+                    DOM.interactionPrompt
+                ) {
+
+                    DOM.interactionPrompt.classList.remove(
+                        "visible"
+                    );
+                }
+            }
         }
     }
 
 
     /* =====================================================
        INPUT EVENTS
+       
+       IMPORTANT:
+       Keyboard input itself is handled by Input.js.
+
+       Main.js only reads Input states here.
+       This prevents duplicate keyboard listeners.
     ===================================================== */
 
     function setupInput() {
 
         /*
-           IMPORTANT:
-           Main game actions are handled here
-           only through explicit keydown checks.
+           Input.js owns keyboard events.
 
-           Enter is intentionally NOT a gameplay
-           action. This prevents accidental Enter
-           activation and the previous freeze issue.
+           We intentionally do NOT add another
+           window keydown listener here.
         */
+    }
 
 
-        window.addEventListener(
-            "keydown",
-            event => {
+    /* =====================================================
+       PROCESS INPUT
+    ===================================================== */
 
-                const state =
-                    GameState.get();
+    function processInput() {
 
+        if (
+            typeof Input ===
+            "undefined" ||
+            typeof GameState ===
+            "undefined"
+        ) {
 
-                /* =========================
-                   ESC
-                ========================== */
-
-                if (
-                    event.code ===
-                    "Escape"
-                ) {
-
-                    event.preventDefault();
-
-                    if (
-                        DOM.inventoryScreen &&
-                        DOM.inventoryScreen.classList.contains(
-                            "active"
-                        )
-                    ) {
-
-                        closeInventory();
-
-                        return;
-                    }
+            return;
+        }
 
 
-                    togglePause();
-
-                    return;
-                }
+        const state =
+            GameState.get();
 
 
-                /* =========================
-                   SPACE
-                ========================== */
+        if (
+            !state ||
+            !state.gameStarted ||
+            state.gameOver
+        ) {
 
-                if (
-                    event.code ===
-                    "Space"
-                ) {
-
-                    if (
-                        Story &&
-                        typeof Story.isWaitingForChoice ===
-                        "function" &&
-                        Story.isWaitingForChoice()
-                    ) {
-
-                        return;
-                    }
-
-
-                    if (
-                        Story &&
-                        typeof Story.isActive ===
-                        "function" &&
-                        Story.isActive()
-                    ) {
-
-                        event.preventDefault();
-
-                        advanceDialogue();
-
-                        return;
-                    }
-                }
-
-
-                /* =========================
-                   F
-                ========================== */
-
-                if (
-                    event.code ===
-                    "KeyF"
-                ) {
-
-                    if (
-                        state.gameStarted &&
-                        !state.gamePaused
-                    ) {
-
-                        event.preventDefault();
-
-                        if (
-                            typeof Player !==
-                            "undefined"
-                        ) {
-
-                            Player.toggleFlashlight();
-                        }
-                    }
-
-                    return;
-                }
-
-
-                /* =========================
-                   I
-                ========================== */
-
-                if (
-                    event.code ===
-                    "KeyI"
-                ) {
-
-                    if (
-                        state.gameStarted &&
-                        !state.gamePaused
-                    ) {
-
-                        event.preventDefault();
-
-                        toggleInventory();
-                    }
-
-                    return;
-                }
-            },
-            {
-                passive: false
-            }
-        );
+            return;
+        }
 
 
         /*
-           Prevent browser default behaviour for
-           Space when the game is active.
+           Escape
         */
 
-        window.addEventListener(
-            "keyup",
-            event => {
+        if (
+            Input.isPausePressed()
+        ) {
 
-                if (
-                    event.code ===
-                    "Space"
-                ) {
+            togglePause();
 
-                    if (
-                        GameState.get()
-                            .gameStarted
-                    ) {
+            return;
+        }
 
-                        event.preventDefault();
-                    }
-                }
-            },
-            {
-                passive: false
+
+        /*
+           Don't process gameplay controls
+           while paused.
+        */
+
+        if (
+            state.gamePaused
+        ) {
+
+            return;
+        }
+
+
+        /*
+           Flashlight
+        */
+
+        if (
+            Input.isFlashlightPressed()
+        ) {
+
+            if (
+                typeof Player !==
+                "undefined" &&
+                typeof Player.toggleFlashlight ===
+                "function"
+            ) {
+
+                Player.toggleFlashlight();
             }
-        );
+        }
+
+
+        /*
+           Inventory
+        */
+
+        if (
+            Input.isInventoryPressed()
+        ) {
+
+            toggleInventory();
+        }
+
+
+        /*
+           Dialogue
+        */
+
+        if (
+            Input.isDialoguePressed()
+        ) {
+
+            if (
+                typeof Story !==
+                "undefined" &&
+                typeof Story.isWaitingForChoice ===
+                "function" &&
+                Story.isWaitingForChoice()
+            ) {
+
+                return;
+            }
+
+
+            if (
+                typeof Story !==
+                "undefined" &&
+                typeof Story.isActive ===
+                "function" &&
+                Story.isActive()
+            ) {
+
+                advanceDialogue();
+            }
+        }
     }
 
 
@@ -1101,7 +1310,9 @@ const Game = (() => {
 
         if (
             typeof GameState ===
-            "undefined"
+            "undefined" ||
+            typeof GameState.get !==
+            "function"
         ) {
 
             return;
@@ -1112,11 +1323,20 @@ const Game = (() => {
             GameState.get();
 
 
-        /* =========================
-           HEALTH
-        ========================== */
+        if (!state) {
 
-        if (DOM.healthBar) {
+            return;
+        }
+
+
+        /*
+           HEALTH
+        */
+
+        if (
+            DOM.healthBar &&
+            state.player
+        ) {
 
             DOM.healthBar.style.width =
                 `${clamp(
@@ -1127,11 +1347,14 @@ const Game = (() => {
         }
 
 
-        /* =========================
+        /*
            SANITY
-        ========================== */
+        */
 
-        if (DOM.sanityBar) {
+        if (
+            DOM.sanityBar &&
+            state.player
+        ) {
 
             DOM.sanityBar.style.width =
                 `${clamp(
@@ -1142,11 +1365,14 @@ const Game = (() => {
         }
 
 
-        /* =========================
+        /*
            BATTERY
-        ========================== */
+        */
 
-        if (DOM.batteryBar) {
+        if (
+            DOM.batteryBar &&
+            state.player
+        ) {
 
             DOM.batteryBar.style.width =
                 `${clamp(
@@ -1157,9 +1383,9 @@ const Game = (() => {
         }
 
 
-        /* =========================
+        /*
            OBJECTIVE
-        ========================== */
+        */
 
         if (
             DOM.objectiveText &&
@@ -1173,9 +1399,9 @@ const Game = (() => {
         }
 
 
-        /* =========================
+        /*
            GAME TIME
-        ========================== */
+        */
 
         if (DOM.gameTime) {
 
@@ -1186,11 +1412,14 @@ const Game = (() => {
         }
 
 
-        /* =========================
+        /*
            FLASHLIGHT
-        ========================== */
+        */
 
-        if (DOM.flashlight) {
+        if (
+            DOM.flashlight &&
+            state.player
+        ) {
 
             if (
                 state.player.flashlightOn
@@ -1216,16 +1445,34 @@ const Game = (() => {
 
     function showDeathScreen() {
 
-        const state =
-            GameState.get();
+        if (
+            typeof GameState !==
+            "undefined"
+        ) {
+
+            const state =
+                GameState.get();
 
 
-        state.gameOver = true;
+            if (state) {
+
+                state.gameOver = true;
+            }
+        }
 
 
         showScreen(
             "death-screen"
         );
+
+
+        hidePauseMenu();
+
+        closeInventory();
+
+        hideDialogue();
+
+        hideInteractionPrompt();
     }
 
 
@@ -1233,9 +1480,7 @@ const Game = (() => {
        ENDING
     ===================================================== */
 
-    function showEnding(
-        endingId
-    ) {
+    function showEnding(endingId) {
 
         showScreen(
             "ending-screen"
@@ -1287,10 +1532,9 @@ const Game = (() => {
             message;
 
 
-        DOM.notificationContainer
-            .appendChild(
-                notification
-            );
+        DOM.notificationContainer.appendChild(
+            notification
+        );
 
 
         setTimeout(
@@ -1341,7 +1585,8 @@ const Game = (() => {
 
 
         /*
-           Prevent giant delta after tab switching.
+           Prevent giant delta after
+           tab switching.
         */
 
         delta =
@@ -1351,9 +1596,7 @@ const Game = (() => {
             );
 
 
-        update(
-            delta
-        );
+        update(delta);
 
 
         animationFrame =
@@ -1371,7 +1614,9 @@ const Game = (() => {
 
         if (
             typeof GameState ===
-            "undefined"
+            "undefined" ||
+            typeof GameState.get !==
+            "function"
         ) {
 
             return;
@@ -1382,10 +1627,33 @@ const Game = (() => {
             GameState.get();
 
 
+        if (!state) {
+
+            return;
+        }
+
+
+        /*
+           Read one-shot input before
+           updating the game systems.
+        */
+
+        processInput();
+
+
+        /*
+           Refresh state after input.
+        */
+
+        const currentState =
+            GameState.get();
+
+
         if (
-            state.gameStarted &&
-            !state.gamePaused &&
-            !state.gameOver
+            currentState &&
+            currentState.gameStarted &&
+            !currentState.gamePaused &&
+            !currentState.gameOver
         ) {
 
             /*
@@ -1399,9 +1667,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                Player.update(
-                    delta
-                );
+                Player.update(delta);
             }
 
 
@@ -1416,9 +1682,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                World.update(
-                    delta
-                );
+                World.update(delta);
             }
 
 
@@ -1433,9 +1697,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                Interaction.update(
-                    delta
-                );
+                Interaction.update(delta);
             }
 
 
@@ -1450,9 +1712,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                Puzzles.update(
-                    delta
-                );
+                Puzzles.update(delta);
             }
 
 
@@ -1467,9 +1727,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                Horror.update(
-                    delta
-                );
+                Horror.update(delta);
             }
 
 
@@ -1484,9 +1742,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                EnemyAI.update(
-                    delta
-                );
+                EnemyAI.update(delta);
             }
 
 
@@ -1501,9 +1757,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                Events.update(
-                    delta
-                );
+                Events.update(delta);
             }
 
 
@@ -1516,9 +1770,7 @@ const Game = (() => {
                 "function"
             ) {
 
-                GameState.updateTime(
-                    delta
-                );
+                GameState.updateTime(delta);
             }
 
 
@@ -1533,17 +1785,39 @@ const Game = (() => {
                 "function"
             ) {
 
-                AudioSystem.update(
-                    delta
-                );
+                AudioSystem.update(delta);
             }
         }
 
 
+        /*
+           UI.
+        */
+
         updateUI();
 
 
+        /*
+           Game over.
+        */
+
         checkGameOver();
+
+
+        /*
+           Clear one-frame input AFTER
+           all systems have consumed it.
+        */
+
+        if (
+            typeof Input !==
+            "undefined" &&
+            typeof Input.update ===
+            "function"
+        ) {
+
+            Input.update();
+        }
     }
 
 
@@ -1567,7 +1841,9 @@ const Game = (() => {
 
 
         if (
-            state.gameOver
+            !state ||
+            state.gameOver ||
+            !state.player
         ) {
 
             return;
@@ -1613,9 +1889,7 @@ const Game = (() => {
     }
 
 
-    function formatTime(
-        seconds
-    ) {
+    function formatTime(seconds) {
 
         seconds =
             Math.max(
@@ -1664,6 +1938,37 @@ const Game = (() => {
 
 
         cacheDOM();
+
+
+        /*
+           Input owns keyboard listeners.
+        */
+
+        if (
+            typeof Input !==
+            "undefined" &&
+            typeof Input.initialize ===
+            "function"
+        ) {
+
+            Input.initialize();
+        }
+
+
+        /*
+           Interaction owns interaction logic.
+        */
+
+        if (
+            typeof Interaction !==
+            "undefined" &&
+            typeof Interaction.initialize ===
+            "function"
+        ) {
+
+            Interaction.initialize();
+        }
+
 
         setupButtons();
 
