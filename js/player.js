@@ -1,27 +1,32 @@
 /* =========================================================
    WHEN THE LIGHT DIES
    PLAYER SYSTEM
+   PC + MOBILE
 ========================================================= */
 
 "use strict";
 
+
 const Player = (() => {
 
-    const movement = {
+    let initialized = false;
 
-        speed: 3,
+    const player = {
 
-        runMultiplier: 1.7,
+        x: 0,
+        y: 0,
 
-        enabled: true
-    };
+        speed: 180,
+        runSpeed: 280,
 
+        health: 100,
+        sanity: 100,
+        battery: 100,
 
-    const flashlight = {
+        flashlightOn: false,
 
-        drainPerSecond: 0.35,
-
-        batteryWarning: 20
+        running: false,
+        moving: false
     };
 
 
@@ -31,23 +36,119 @@ const Player = (() => {
 
     function initialize() {
 
+        if (initialized) {
+            return;
+        }
+
+        initialized = true;
+
+        syncFromState();
+
+        resetPosition();
+    }
+
+
+    /* =====================================================
+       RESET POSITION
+    ===================================================== */
+
+    function resetPosition() {
+
+        player.x = 0;
+        player.y = 0;
+
+        player.running = false;
+        player.moving = false;
+
+        player.flashlightOn = false;
+
+        syncToState();
+    }
+
+
+    /* =====================================================
+       SYNC FROM GAME STATE
+    ===================================================== */
+
+    function syncFromState() {
+
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return;
+        }
+
         const state =
             GameState.get();
 
+        if (!state || !state.player) {
+            return;
+        }
 
-        state.player.health = 100;
+        player.health =
+            state.player.health ?? 100;
 
-        state.player.sanity = 100;
+        player.sanity =
+            state.player.sanity ?? 100;
 
-        state.player.battery = 100;
+        player.battery =
+            state.player.battery ?? 100;
 
-        state.player.isAlive = true;
+        player.flashlightOn =
+            Boolean(
+                state.player.flashlightOn
+            );
 
-        state.player.isRunning = false;
+        player.x =
+            state.player.position?.x ?? 0;
 
-        state.player.isMoving = false;
+        player.y =
+            state.player.position?.y ?? 0;
+    }
 
-        state.player.flashlightOn = false;
+
+    /* =====================================================
+       SYNC TO GAME STATE
+    ===================================================== */
+
+    function syncToState() {
+
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return;
+        }
+
+        const state =
+            GameState.get();
+
+        if (!state || !state.player) {
+            return;
+        }
+
+        state.player.health =
+            player.health;
+
+        state.player.sanity =
+            player.sanity;
+
+        state.player.battery =
+            player.battery;
+
+        state.player.flashlightOn =
+            player.flashlightOn;
+
+        state.player.isMoving =
+            player.moving;
+
+        state.player.isRunning =
+            player.running;
+
+        state.player.position.x =
+            player.x;
+
+        state.player.position.y =
+            player.y;
     }
 
 
@@ -57,142 +158,129 @@ const Player = (() => {
 
     function update(delta) {
 
+        if (
+            typeof GameState === "undefined" ||
+            typeof Input === "undefined"
+        ) {
+            return;
+        }
+
         const state =
             GameState.get();
 
-
         if (
+            !state ||
             !state.gameStarted ||
             state.gamePaused ||
             state.gameOver ||
             !state.player.isAlive
         ) {
-
             return;
         }
 
 
-        updateMovement(
-            delta
-        );
+        const movement =
+            Input.getMovement();
 
 
-        updateFlashlight(
-            delta
-        );
+        player.moving =
+            movement.moving;
 
 
-        updateSanity(
-            delta
-        );
-    }
-
-
-    /* =====================================================
-       MOVEMENT
-    ===================================================== */
-
-    function updateMovement(delta) {
-
-        if (!movement.enabled) {
-
-            return;
-        }
-
-
-        const up =
-            Input.isDown("KeyW") ||
-            Input.isDown("ArrowUp");
-
-
-        const down =
-            Input.isDown("KeyS") ||
-            Input.isDown("ArrowDown");
-
-
-        const left =
-            Input.isDown("KeyA") ||
-            Input.isDown("ArrowLeft");
-
-
-        const right =
-            Input.isDown("KeyD") ||
-            Input.isDown("ArrowRight");
-
+        /*
+           SHIFT / MOBILE RUN
+        */
 
         const running =
             Input.isDown("ShiftLeft") ||
             Input.isDown("ShiftRight");
 
 
-        const horizontal =
-            (right ? 1 : 0) -
-            (left ? 1 : 0);
+        player.running =
+            player.moving &&
+            running;
 
 
-        const vertical =
-            (down ? 1 : 0) -
-            (up ? 1 : 0);
-
-
-        const moving =
-            horizontal !== 0 ||
-            vertical !== 0;
-
-
-        const state =
-            GameState.get();
-
-
-        state.player.isMoving =
-            moving;
-
-
-        state.player.isRunning =
-            running && moving;
-
-
-        if (!moving) {
-
-            return;
-        }
-
-
-        const speed =
-            movement.speed *
-            (
-                state.player.isRunning
-                    ? movement.runMultiplier
-                    : 1
-            );
+        const currentSpeed =
+            player.running
+                ? player.runSpeed
+                : player.speed;
 
 
         /*
-           Actual world/camera movement will be
-           connected when world.js is created.
-
-           For now the player system only calculates
-           movement state.
+           MOVEMENT
         */
 
-        const movementX =
-            horizontal *
-            speed *
+        player.x +=
+            movement.x *
+            currentSpeed *
+            delta;
+
+        player.y +=
+            movement.y *
+            currentSpeed *
             delta;
 
 
-        const movementY =
-            vertical *
-            speed *
-            delta;
+        /*
+           BATTERY
+        */
+
+        if (
+            player.flashlightOn
+        ) {
+
+            GameState.drainBattery(
+                2.5 * delta
+            );
+
+            player.battery =
+                GameState.get()
+                    .player
+                    .battery;
 
 
-        state.player.lastMovement = {
+            if (
+                player.battery <= 0
+            ) {
 
-            x: movementX,
+                player.flashlightOn =
+                    false;
+            }
+        }
 
-            y: movementY
-        };
+
+        /*
+           RUNNING AFFECTS SANITY
+           AND FUTURE STAMINA SYSTEM.
+        */
+
+        if (
+            player.running
+        ) {
+
+            GameState.changeSanity(
+                -0.15 * delta
+            );
+        }
+
+
+        /*
+           VERY DARK ENVIRONMENT
+           SLOW SANITY LOSS.
+        */
+
+        if (
+            !player.flashlightOn
+        ) {
+
+            GameState.changeSanity(
+                -0.03 * delta
+            );
+        }
+
+
+        syncToState();
     }
 
 
@@ -200,62 +288,59 @@ const Player = (() => {
        FLASHLIGHT
     ===================================================== */
 
-    function updateFlashlight(delta) {
-
-        const state =
-            GameState.get();
-
-
-        if (
-            !state.player.flashlightOn
-        ) {
-
-            return;
-        }
-
-
-        if (
-            state.player.battery <= 0
-        ) {
-
-            state.player.flashlightOn =
-                false;
-
-            return;
-        }
-
-
-        GameState.drainBattery(
-            flashlight.drainPerSecond *
-            delta
-        );
-    }
-
-
-    /* =====================================================
-       TOGGLE FLASHLIGHT
-    ===================================================== */
-
     function toggleFlashlight() {
 
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return false;
+        }
+
         const state =
             GameState.get();
 
+        if (
+            !state.gameStarted ||
+            state.gamePaused ||
+            state.gameOver
+        ) {
+            return false;
+        }
 
         if (
-            state.player.battery <= 0 ||
-            !state.player.isAlive
+            player.battery <= 0
         ) {
 
-            state.player.flashlightOn =
+            player.flashlightOn =
                 false;
 
-            return;
+            syncToState();
+
+            return false;
         }
 
 
-        state.player.flashlightOn =
-            !state.player.flashlightOn;
+        player.flashlightOn =
+            !player.flashlightOn;
+
+
+        syncToState();
+
+
+        if (
+            typeof AudioSystem !==
+            "undefined" &&
+            typeof AudioSystem.playSFX ===
+            "function"
+        ) {
+
+            AudioSystem.playSFX(
+                "flashlight"
+            );
+        }
+
+
+        return player.flashlightOn;
     }
 
 
@@ -265,9 +350,17 @@ const Player = (() => {
 
     function damage(amount) {
 
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return;
+        }
+
         GameState.damagePlayer(
             amount
         );
+
+        syncFromState();
     }
 
 
@@ -277,9 +370,17 @@ const Player = (() => {
 
     function heal(amount) {
 
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return;
+        }
+
         GameState.healPlayer(
             amount
         );
+
+        syncFromState();
     }
 
 
@@ -287,11 +388,19 @@ const Player = (() => {
        SANITY
     ===================================================== */
 
-    function modifySanity(amount) {
+    function changeSanity(amount) {
+
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return;
+        }
 
         GameState.changeSanity(
             amount
         );
+
+        syncFromState();
     }
 
 
@@ -299,55 +408,55 @@ const Player = (() => {
        BATTERY
     ===================================================== */
 
-    function rechargeBattery(amount) {
+    function rechargeBattery(
+        amount
+    ) {
 
-        const state =
-            GameState.get();
+        if (
+            typeof GameState === "undefined"
+        ) {
+            return;
+        }
 
+        GameState.rechargeBattery(
+            amount
+        );
 
-        state.player.battery =
-            Math.min(
-                100,
-                state.player.battery +
-                amount
-            );
+        syncFromState();
     }
 
 
     /* =====================================================
-       ENABLE / DISABLE MOVEMENT
+       POSITION
     ===================================================== */
 
-    function enableMovement() {
+    function setPosition(
+        x,
+        y
+    ) {
 
-        movement.enabled = true;
+        player.x =
+            Number.isFinite(x)
+                ? x
+                : 0;
+
+        player.y =
+            Number.isFinite(y)
+                ? y
+                : 0;
+
+        syncToState();
     }
 
 
-    function disableMovement() {
+    function getPosition() {
 
-        movement.enabled = false;
+        return {
 
+            x: player.x,
 
-        const state =
-            GameState.get();
-
-
-        state.player.isMoving = false;
-
-        state.player.isRunning = false;
-    }
-
-
-    /* =====================================================
-       IS ALIVE
-    ===================================================== */
-
-    function isAlive() {
-
-        return GameState.get()
-            .player
-            .isAlive;
+            y: player.y
+        };
     }
 
 
@@ -355,10 +464,12 @@ const Player = (() => {
        GET PLAYER
     ===================================================== */
 
-    function getState() {
+    function get() {
 
-        return GameState.get()
-            .player;
+        return {
+
+            ...player
+        };
     }
 
 
@@ -372,21 +483,23 @@ const Player = (() => {
 
         update,
 
+        resetPosition,
+
         toggleFlashlight,
 
         damage,
+
         heal,
 
-        modifySanity,
+        changeSanity,
 
         rechargeBattery,
 
-        enableMovement,
-        disableMovement,
+        setPosition,
 
-        isAlive,
+        getPosition,
 
-        getState
+        get
     };
 
 })();
